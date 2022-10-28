@@ -1,0 +1,44 @@
+version: '3.3'
+
+services:
+  redis:
+    image: redis
+    command: redis-server
+    ports:
+      - '6379:6379'
+  db:
+    image: postgres
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - '8000:8000'
+    depends_on:
+      - migration
+      - makemigration
+      - db
+  migration:
+    build: .
+    command: python manage.py migrate
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+      - makemigration
+  makemigration:
+    build: .
+    command: python manage.py makemigrations core
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+  celery:
+    build: .
+    command: celery worker -A appfollow -l info -B
+    volumes:
+      - .:/code
+    links:
+      - db
+      - redis
